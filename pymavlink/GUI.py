@@ -6,9 +6,14 @@ import socket
 
 def send(msg):
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.sendto(msg.encode(), ('localhost', 15555))
-            print(f"Sent msg: {msg}")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            # Connect to the server
+            sock.connect(('localhost', 15555))
+
+            # Send the command
+            print(f'Sending command: {msg}')
+            sock.sendall(msg.encode('utf8'))
+
     except Exception as e:
         print(f"Error sending msg: {e}")
 

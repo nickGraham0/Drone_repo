@@ -1,6 +1,10 @@
 from pymavlink import mavutil
 import time
 
+import asyncio
+from PIL import Image
+import io 
+
 USE_POSITION        = 0b110111111000  # 0x0DF8 / 3576 (decimal)
 USE_VELOCITY        = 0b110111000111  # 0x0DC7 / 3527 (decimal)
 USE_ACCELERATION    = 0b110000111111  # 0x0C3F / 3135 (decimal)
@@ -12,40 +16,17 @@ USE_YAW_RATE        = 0b010111111111  # 0x05FF / 1535 (decimal)
 arm     = 1
 disarm  = 0
 
-takeoff_altitude = 10
-tgt_sys_id  = 1 # 1 -> default
-tgt_comp_id = 1 # 1 -> Autopilot
-takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
-#start a connection listening to UDP port
-#SITL lauches 2 mavlink streams
 drone = mavutil.mavlink_connection('udpin:localhost:14550')
 
 # Wait for heartbeat... ArduPilot always sends heartbeat
 #   Set system and component ID of remote system for the link
 
-def drone_loop():
+def drone_init():
     #=======================INIT===========================
     drone.wait_heartbeat()
     print("Heartbeat from system (system %u component %u)" % (drone.target_system, drone.target_component))
 
-
-    #======================Arm=============================
-
-    #Use command long, a generic command function 
-    ''' 
-    drone.mav.command_long_send(drone.target_system,        #System ID
-                                drone.target_component,     #Flight Controller ID
-                                mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 
-                                0, 
-                                arm,                        #Set Arm/Disarm
-                                0, 0, 0, 0, 0, 0)           #Unused
-
-    #Wait for ack from drone for arming before continue
-    msg = drone.recv_match(type='COMMAND_ACK', blocking=True)
-    print(msg)
-    '''
-
-
+def drone_mode(mode = "GUIDED"):
     #======================GUIDED MODE=============================
     # Set the drone to GUIDED mode
     # Set the vehicle to GUIDED mode
@@ -55,7 +36,7 @@ def drone_loop():
         mavutil.mavlink.MAV_CMD_DO_SET_MODE,
         0,
         mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
-        drone.mode_mapping()["GUIDED"],  # Mode index for GUIDED
+        drone.mode_mapping()[mode],  # Mode index for GUIDED
         0, 0, 0, 0, 0
     )
 
@@ -64,25 +45,7 @@ def drone_loop():
     ack_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
     print(f"Change Mode ACK:  {ack_msg}")
 
-    ''' 
-    # Raise throttle to 50% (1500 on channel 3)
-    drone.mav.rc_channels_override_send(
-        drone.target_system,   # System ID
-        drone.target_component,  # Component ID (usually autopilot)
-        0,                     # Channel 1 (leave unchanged)
-        0,                     # Channel 2 (leave unchanged)
-        3000,                  # Channel 3 (Throttle -> set to 50%)
-        0,                     # Channel 4 (leave unchanged)
-        0, 0, 0, 0            # Other channels (leave unchanged)
-    )
-    print("Trottle")
-    '''
-
-
-    #Ensure that Proper Acknowledgement for mode change 
-    ack_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-    print(f"Change Trottle ACK:  {ack_msg}")
-
+def drone_takeoff(takeoff_params, arm_time = 10):
     #======================TAKE OFF=============================
     # Arm the Takeoff System
     drone.mav.command_long_send(drone.target_system, 
@@ -110,46 +73,127 @@ def drone_loop():
 
     takeoff_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
     print(f"Takeoff ACK:  {takeoff_msg}")
+    
+    time.sleep(arm_time) 
 
-
+def drone_control_up(): 
     #======================CONTROL DRONE=============================
-    time.sleep(10) 
     #Position Target msg for Drone
     drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
-                            drone.target_system,                #System ID
-                            drone.target_component,             #Flight Controller ID 
-                            mavutil.mavlink.MAV_FRAME_LOCAL_NED, #Coordinate Frame
-                            int(USE_POSITION),                  #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
-                            10, 0, -10,                  # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
-                            0, 0, 0,                    # Velocity (x, y, z) = 0, since we're moving by position
-                            0, 0, 0,                    # Acceleration (x, y, z) = 0, not used here
-                            0, 0))                         # Yaw, yaw rate (not changing yaw in this example)
+                            drone.target_system,                    #System ID
+                            drone.target_component,                 #Flight Controller ID 
+                            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
+                            int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
+                            0, 0, -10,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
+                            0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
+                            0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
+                            0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
     move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-    print(f"Move ACK:  {move_msg}")
+    print(f"Move Up ACK:  {move_msg}")
 
-    while 1:
-        #Lookout for LOCAL_POSITION_NED msgs from Drone
-        #msg = drone.recv_match(type='LOCAL_POSITION_NED', blocking=True)
-        #print(msg)
-        #print(drone.target_system)
-        #print(drone.target_component)
+def drone_control_down(): 
+    #======================CONTROL DRONE=============================
+    #Position Target msg for Drone
+    drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
+                            drone.target_system,                    #System ID
+                            drone.target_component,                 #Flight Controller ID 
+                            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
+                            int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
+                            0, 0, 10,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
+                            0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
+                            0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
+                            0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
+    move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
+    print(f"Move Down ACK:  {move_msg}")
 
-        msg = drone.recv_match(type='STATUSTEXT', blocking=True)
-        print(f"Status message: {msg.text}")
-        time.sleep(1)
+def drone_control_left(): 
+    #======================CONTROL DRONE=============================
+    #Position Target msg for Drone
+    drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
+                            drone.target_system,                    #System ID
+                            drone.target_component,                 #Flight Controller ID 
+                            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
+                            int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
+                            0, -10, 0,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
+                            0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
+                            0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
+                            0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
+    move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
+    print(f"Move Left ACK:  {move_msg}")
 
+def drone_control_right(): 
+    #======================CONTROL DRONE=============================
+    #Position Target msg for Drone
+    drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
+                            drone.target_system,                    #System ID
+                            drone.target_component,                 #Flight Controller ID 
+                            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
+                            int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
+                            0, 10, 0,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
+                            0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
+                            0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
+                            0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
+    move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
+    print(f"Move Right ACK:  {move_msg}")
 
 def main():
-    # Example waypoints (latitude, longitude, altitude)
-    # Waypoints near Cobb County RC Club (CobbCountyRC)
-    waypoints = [
-        (34.013819, -84.724446, 10),  # CobbCountyRC, at 10 meters altitude
-        (34.014500, -84.724000, 10),  # 80 meters northeast
-        (34.013500, -84.725000, 10),  # 80 meters southwest
-        (34.013000, -84.724200, 10),  # 90 meters southeast
-        (34.014000, -84.725500, 10)   # 120 meters northwest
-    ]
+    takeoff_altitude = 10
+    takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
 
-    drone_loop()
+    drone_init()
+    drone_mode("GUIDED")
+    drone_takeoff(takeoff_params, takeoff_altitude)
 
+    asyncio.run(run_server())
+
+# Asynchronous function to handle a connected client
+async def handle_client(reader, writer):
+    
+    print("Handle Client")
+    request = None  # Initialize the request variable
+
+    # Read the client's message (up to 255 bytes) and decode from utf8
+    request = (await reader.read(255)).decode('utf8').strip()
+    
+    request = request.strip()
+
+    command = str(request)
+
+    print("found command: " + str(command))
+    if command == 'wp':                 # Init Waypoint Path
+        request = (await reader.read(4096)).decode('utf8')
+        print("Waypoint")
+
+        tokens = request.split()
+
+        params = [float(x) for x in tokens]
+        request = params
+        print(request)
+        
+    if command == 'up':                  
+        print("up")   
+        drone_control_up()
+
+    if command == 'down':                
+        print("down")
+        drone_control_down()
+      
+    if command == 'left':                  
+        print("left")
+        drone_control_left()
+                 
+    if command == 'right':                 
+        print("right")
+        drone_control_right()
+      
+                      
+# Asynchronous function to start the server
+async def run_server():
+    print("Running Server")
+    server = await asyncio.start_server(handle_client, 'localhost', 15555)
+    print("After Running Server")
+    async with server:
+        await server.serve_forever()
+
+# Entry point to run the asyncio server
 main()
