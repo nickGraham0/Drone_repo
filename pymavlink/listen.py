@@ -120,7 +120,7 @@ def drone_loop():
                             drone.target_component,             #Flight Controller ID 
                             mavutil.mavlink.MAV_FRAME_LOCAL_NED, #Coordinate Frame
                             int(USE_POSITION),                  #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
-                            10, 0, -10,                  # X, Y, Z positions (5 meters forward, 0 right, -10 meters up)
+                            10, 0, -10,                  # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
                             0, 0, 0,                    # Velocity (x, y, z) = 0, since we're moving by position
                             0, 0, 0,                    # Acceleration (x, y, z) = 0, not used here
                             0, 0))                         # Yaw, yaw rate (not changing yaw in this example)
@@ -151,3 +151,5 @@ def main():
     ]
 
     drone_loop()
+
+main()
