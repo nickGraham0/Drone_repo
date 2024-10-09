@@ -24,29 +24,103 @@ curr_z = altitude
 
 drone = mavutil.mavlink_connection('udpin:localhost:14550') 
 
+async def send_to_gui(writer, msg):
+    # Send the drone's location back to the client
+    writer.write(msg.encode('utf8'))
+    await writer.drain()
+    print(f"Sent drone location: {msg}")
+    
+    # Close the connection after handling the request
+    writer.close()
+    await writer.wait_closed()
+
 def wait_for_ardupilot_ready():
     print("Waiting for ArduPilot to be ready...")
-    
+
+    barometer1_calibrated = False
+    barometer2_calibrated = False
+    gyro_initialized = False
+    ardupilot_ready = False
+    ahrs_active = False
+    ekf_imu0_initialized = False
+    ekf_imu1_initialized = False
+    imu0_alignment_complete = False
+    imu1_alignment_complete = False
+    gps_detected = False
+    fence_present = False
+    field_elevation_set = False
+    pre_arm_good = False
+
     while True:
         msg = drone.recv_match(blocking=True)
-        
-        # Check for STATUSTEXT message indicating "ArduPilot Ready"
+
+        # Barometer calibration
         if msg.get_type() == 'STATUSTEXT':
             text = msg.text.lower()
-            if "ardupilot ready" in text:
-                print("ArduPilot is ready!")
-                break
-        
-        # Check if EKF and GPS are initialized and healthy
-        elif msg.get_type() == 'EKF_STATUS_REPORT':
-            if msg.flags & mavutil.mavlink.EKF_ATTITUDE and msg.flags & mavutil.mavlink.EKF_VELOCITY_HORIZ and msg.flags & mavutil.mavlink.EKF_POS_HORIZ_ABS:
-                print("EKF and GPS are initialized and ready.")
-        
-        # Check for ARMING_STATE to ensure pre-arm checks have passed
+            if "barometer 1 calibration complete" in text:
+                barometer1_calibrated = True
+                print("Barometer 1 calibrated")
+            elif "barometer 2 calibration complete" in text:
+                barometer2_calibrated = True
+                print("Barometer 2 calibrated")
+            elif "ardupilot ready" in text:
+                ardupilot_ready = True
+                print("ArduPilot Ready")
+            elif "pre-arm good" in text:
+                pre_arm_good = True
+                print("Pre-arm checks passed")
+
+        # Mode check: STABILIZE
         elif msg.get_type() == 'HEARTBEAT':
-            if msg.system_status == mavutil.mavlink.MAV_STATE_STANDBY and msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED == 0:
-                print("Pre-arm checks passed. Ready to arm.")
-                break
+            mode = mavutil.mode_string_v10(msg)
+            if mode == 'STABILIZE':
+                print(f"Mode: {mode}")
+
+        # Gyroscope initialization
+        elif msg.get_type() == 'GYROCAL':
+            gyro_initialized = True
+            print("Gyro initialized")
+
+        # AHRS and EKF3 IMU Initialization
+        elif msg.get_type() == 'AHRS2':
+            if msg.get_type() == 'AHRS2':
+                ahrs_active = True
+                print("AHRS active")
+        
+        elif msg.get_type() == 'EKF_STATUS_REPORT':
+            # IMU Initialization
+            if msg.flags & mavutil.mavlink.EKF_ATTITUDE and msg.flags & mavutil.mavlink.EKF_VELOCITY_HORIZ and msg.flags & mavutil.mavlink.EKF_POS_HORIZ_ABS:
+                ekf_imu0_initialized = True
+                ekf_imu1_initialized = True
+                print("EKF3 IMU0 and IMU1 initialized and ready")
+            # IMU Alignment Complete
+            if msg.flags & mavutil.mavlink.EKF_POS_HORIZ_ABS:
+                imu0_alignment_complete = True
+                imu1_alignment_complete = True
+                print("IMU0 and IMU1 alignment complete")
+
+        # GPS initialization and detection
+        elif msg.get_type() == 'GPS_RAW_INT':
+            if msg.fix_type >= 3:  # Assuming 3D Fix
+                gps_detected = True
+                print(f"GPS detected: {msg.fix_type}")
+
+        # Fence
+        elif msg.get_type() == 'FENCE_STATUS':
+            if msg.breach_status == 0:  # No fence breach
+                fence_present = True
+                print("Fence present")
+
+        # Field Elevation
+        elif msg.get_type() == 'STATUSTEXT' and "Field Elevation Set" in msg.text:
+            field_elevation_set = True
+            print(f"Field Elevation Set: {msg.text}")
+
+        # Check if all conditions are met
+        if (imu0_alignment_complete and imu1_alignment_complete):
+            print("All pre-flight checks complete. Ready to proceed.")
+            break
+
 
 
 def drone_init():
@@ -108,10 +182,10 @@ def drone_takeoff(takeoff_params, arm_time = 10):
     time.sleep(arm_time) 
 
 def drone_tel_location():
-    position_msg = drone.recv_match(type='LOCAL_POSITION_NED', blocking=True, timeout=1)
+    position_msg = drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=1)
     if position_msg:
         print(f"Current Position: x={position_msg.x}, y={position_msg.y}, z={position_msg.z}")
-
+        return f"Current Position: x={position_msg.x}, y={position_msg.y}, z={position_msg.z}"
 
 def drone_control():
     drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
@@ -166,14 +240,18 @@ def drone_control_right():
     drone_control()
 
 def main():
-    takeoff_altitude = 10
-    takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
-
-    drone_init()
-    drone_mode("GUIDED")
-    drone_takeoff(takeoff_params, takeoff_altitude)
-
-    asyncio.run(run_server())
+    try:
+        takeoff_altitude = 10
+        takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
+        drone_init()
+        drone_mode("GUIDED")
+        drone_takeoff(takeoff_params, takeoff_altitude)
+        asyncio.run(run_server())
+    finally:
+        # Close the MAVLink connection when the program finishes
+        if drone:
+            drone.close()
+            print("MAVLink connection closed.")
 
 # Asynchronous function to handle a connected client
 async def handle_client(reader, writer):
@@ -214,8 +292,13 @@ async def handle_client(reader, writer):
     if command == 'right':                 
         print("right")
         drone_control_right()
-      
-                      
+
+    if command == 'drone_loc':                 
+        print("drone_loc")
+        loc = drone_tel_location()     
+        if loc:
+            await send_to_gui(writer, loc) 
+
 # Asynchronous function to start the server
 async def run_server():
     print("Running Server")
