@@ -16,15 +16,44 @@ USE_YAW_RATE        = 0b010111111111  # 0x05FF / 1535 (decimal)
 arm     = 1
 disarm  = 0
 
-drone = mavutil.mavlink_connection('udpin:localhost:14550')
+altitude = -10
 
-# Wait for heartbeat... ArduPilot always sends heartbeat
-#   Set system and component ID of remote system for the link
+curr_x = 0
+curr_y = 0
+curr_z = altitude
+
+drone = mavutil.mavlink_connection('udpin:localhost:14550') 
+
+def wait_for_ardupilot_ready():
+    print("Waiting for ArduPilot to be ready...")
+    
+    while True:
+        msg = drone.recv_match(blocking=True)
+        
+        # Check for STATUSTEXT message indicating "ArduPilot Ready"
+        if msg.get_type() == 'STATUSTEXT':
+            text = msg.text.lower()
+            if "ardupilot ready" in text:
+                print("ArduPilot is ready!")
+                break
+        
+        # Check if EKF and GPS are initialized and healthy
+        elif msg.get_type() == 'EKF_STATUS_REPORT':
+            if msg.flags & mavutil.mavlink.EKF_ATTITUDE and msg.flags & mavutil.mavlink.EKF_VELOCITY_HORIZ and msg.flags & mavutil.mavlink.EKF_POS_HORIZ_ABS:
+                print("EKF and GPS are initialized and ready.")
+        
+        # Check for ARMING_STATE to ensure pre-arm checks have passed
+        elif msg.get_type() == 'HEARTBEAT':
+            if msg.system_status == mavutil.mavlink.MAV_STATE_STANDBY and msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED == 0:
+                print("Pre-arm checks passed. Ready to arm.")
+                break
+
 
 def drone_init():
     #=======================INIT===========================
     drone.wait_heartbeat()
     print("Heartbeat from system (system %u component %u)" % (drone.target_system, drone.target_component))
+    wait_for_ardupilot_ready()
 
 def drone_mode(mode = "GUIDED"):
     #======================GUIDED MODE=============================
@@ -44,6 +73,8 @@ def drone_mode(mode = "GUIDED"):
     #Ensure that Proper Acknowledgement for mode change 
     ack_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
     print(f"Change Mode ACK:  {ack_msg}")
+
+    time.sleep(10)
 
 def drone_takeoff(takeoff_params, arm_time = 10):
     #======================TAKE OFF=============================
@@ -76,65 +107,63 @@ def drone_takeoff(takeoff_params, arm_time = 10):
     
     time.sleep(arm_time) 
 
-def drone_control_up(): 
-    #======================CONTROL DRONE=============================
-    #Position Target msg for Drone
+def drone_tel_location():
+    position_msg = drone.recv_match(type='LOCAL_POSITION_NED', blocking=True, timeout=1)
+    if position_msg:
+        print(f"Current Position: x={position_msg.x}, y={position_msg.y}, z={position_msg.z}")
+
+
+def drone_control():
     drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
                             drone.target_system,                    #System ID
                             drone.target_component,                 #Flight Controller ID 
                             mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
                             int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
-                            0, 0, -10,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
+                            curr_x, curr_y, curr_z,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
                             0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
                             0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
                             0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
-    move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-    print(f"Move Up ACK:  {move_msg}")
+    drone_tel_location()
+
+
+def drone_control_up(): 
+
+    global curr_x
+    global curr_y
+    global curr_z
+
+    curr_x += 10
+
+    drone_control()
 
 def drone_control_down(): 
-    #======================CONTROL DRONE=============================
-    #Position Target msg for Drone
-    drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
-                            drone.target_system,                    #System ID
-                            drone.target_component,                 #Flight Controller ID 
-                            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
-                            int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
-                            0, 0, 10,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
-                            0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
-                            0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
-                            0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
-    move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-    print(f"Move Down ACK:  {move_msg}")
+
+    global curr_x
+    global curr_y
+    global curr_z
+
+    curr_x -= 10
+
+    drone_control()
 
 def drone_control_left(): 
-    #======================CONTROL DRONE=============================
-    #Position Target msg for Drone
-    drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
-                            drone.target_system,                    #System ID
-                            drone.target_component,                 #Flight Controller ID 
-                            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
-                            int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
-                            0, -10, 0,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
-                            0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
-                            0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
-                            0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
-    move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-    print(f"Move Left ACK:  {move_msg}")
+
+    global curr_x
+    global curr_y
+    global curr_z
+
+    curr_y -= 10
+
+    drone_control()
 
 def drone_control_right(): 
-    #======================CONTROL DRONE=============================
-    #Position Target msg for Drone
-    drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
-                            drone.target_system,                    #System ID
-                            drone.target_component,                 #Flight Controller ID 
-                            mavutil.mavlink.MAV_FRAME_LOCAL_NED,    #Coordinate Frame
-                            int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
-                            0, 10, 0,                             # X, Y, Z positions (5 meters forward, 0 right, -10 meters (going up))
-                            0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
-                            0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
-                            0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
-    move_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-    print(f"Move Right ACK:  {move_msg}")
+    global curr_x
+    global curr_y
+    global curr_z
+
+    curr_y += 10
+
+    drone_control()
 
 def main():
     takeoff_altitude = 10
