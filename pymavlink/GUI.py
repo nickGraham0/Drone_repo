@@ -125,13 +125,19 @@ def read_and_process_csv(filename):
     try:
         with open(filename, mode='r') as file:
             csv_reader = csv.DictReader(file)
+            msg = "wp"
+            waypoints = []
             for i, row in enumerate(csv_reader):
                 lat = float(row['Latitude'])
                 lon = float(row['Longitude'])
-                msg = f"wp {lat} {lon}\n"
-                print(msg)
-                send(msg)
-                # You can send the waypoint to the drone here using the send_waypoint function
+                waypoints.append(f"{lat} {lon}")
+            
+            # Concatenate all waypoints with spaces
+            msg += " " + " ".join(waypoints)
+            print(msg)  # This is for debugging
+            
+            # Send the complete message to the drone
+            send(msg + "\n")  # Assuming send is defined elsewhere
     except Exception as e:
         print(f"Error reading CSV file: {e}")
 

@@ -232,8 +232,8 @@ async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=
             # Calculate the distance to the target waypoint
             distance = calculate_distance(lat_current, lon_current, lat_target, lon_target)
             
-            print(f"Current Position: Latitude={lat_current}, Longitude={lon_current}, Altitude={alt_current}")
-            print(f"Distance to target: {distance} meters, Altitude difference: {abs(alt_current - altitude_target)} meters")
+            #print(f"Current Position: Latitude={lat_current}, Longitude={lon_current}, Altitude={alt_current}")
+            #print(f"Distance to target: {distance} meters, Altitude difference: {abs(alt_current - altitude_target)} meters")
             
             if distance <= tolerance <= tolerance:
                 print("Reached waypoint!")
@@ -250,6 +250,7 @@ async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=
 # Drone will continuously follow path
 async def drone_path(path_coords):
 
+    print(path_coords)
     for wp in path_coords:
         lat = wp[0]
         lng = wp[1]
