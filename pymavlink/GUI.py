@@ -2,8 +2,38 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import socket
 import csv
+import datetime 
+import os 
 
 sock = None
+
+# Function to save drone location to a CSV file
+def save_to_csv(data):
+    # Get current date and time
+    now = datetime.datetime.now()
+    # Format it as MM_DAY_TIME (e.g., 10_07_1530.csv)
+    file_name = now.strftime("%m_%d_%H%M") + ".csv"
+    
+    # Set the path for saving the file (you can change the directory if needed)
+    directory = os.getcwd()  # Gets the current working directory
+    file_path = os.path.join(directory, file_name)
+
+    with open(file_path, mode='w', newline='') as file:
+        csv_writer = csv.writer(file)
+        # Assuming data is of the format: "Current Position: x=10, y=5, z=-2"
+        headers = ["Latitude", "Longitude", "Altitude"]
+        csv_writer.writerow(headers)
+        
+        # Parse the received data
+        parts = data.replace("Current Position: ", "").split(", ")
+        x = parts[0].split("=")[1]
+        y = parts[1].split("=")[1]
+        z = parts[2].split("=")[1]
+
+        # Write the parsed coordinates to the CSV
+        csv_writer.writerow([x, y, z])
+
+    print(f"Saved drone location to {file_path}")
 
 def connect_to_server():
     global sock
@@ -45,25 +75,27 @@ def recieve():
 
 def on_up():
     print("Up button pressed")
-    send("up")
+    send("up\n")
 
 def on_down():
     print("Down button pressed")
-    send("down")
+    send("down\n")
 
 def on_left():
     print("Left button pressed")
-    send("left")
+    send("left\n")
 
 def on_right():
     print("Right button pressed")
-    send("right")
+    send("right\n")
 
 def on_drone_loc():
     print("Drone Location button pressed")
-    send("drone_loc")
+    send("drone_loc\n")
     msg = recieve()
-    print(msg)
+    if msg: 
+        print(msg)
+        #save_to_csv(msg)
 
 # Create the main window
 root = tk.Tk()
@@ -94,10 +126,11 @@ def read_and_process_csv(filename):
         with open(filename, mode='r') as file:
             csv_reader = csv.DictReader(file)
             for i, row in enumerate(csv_reader):
-                lat = float(row['latitude'])
-                lon = float(row['longitude'])
-                alt = float(row['altitude'])
-                print(f"Waypoint {i}: Latitude={lat}, Longitude={lon}, Altitude={alt}")
+                lat = float(row['Latitude'])
+                lon = float(row['Longitude'])
+                msg = f"wp {lat} {lon}\n"
+                print(msg)
+                send(msg)
                 # You can send the waypoint to the drone here using the send_waypoint function
     except Exception as e:
         print(f"Error reading CSV file: {e}")

@@ -1,9 +1,9 @@
 from pymavlink import mavutil
 import time
-
 import asyncio
 from PIL import Image
 import io 
+import math
 
 USE_POSITION        = 0b110111111000  # 0x0DF8 / 3576 (decimal)
 USE_VELOCITY        = 0b110111000111  # 0x0DC7 / 3527 (decimal)
@@ -23,6 +23,8 @@ curr_y = 0
 curr_z = altitude
 
 drone = mavutil.mavlink_connection('udpin:localhost:14550') 
+
+drone_task_path = None
 
 async def send_to_gui(writer, msg):
     # Send the drone's location back to the client
@@ -184,9 +186,13 @@ def drone_takeoff(takeoff_params, arm_time = 10):
 def drone_tel_location():
     position_msg = drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=1)
     if position_msg:
-        print(f"Current Position: x={position_msg.x}, y={position_msg.y}, z={position_msg.z}")
-        return f"Current Position: x={position_msg.x}, y={position_msg.y}, z={position_msg.z}"
+        lat = position_msg.lat / 1e7  # Latitude in degrees
+        lon = position_msg.lon / 1e7  # Longitude in degrees
+        alt = position_msg.relative_alt / 1000  # Relative altitude in meters
 
+        print(f"Current Position: Latitude={lat}, Longitude={lon}, Altitude={alt}")
+        return f"Current Position: Latitude={lat}, Longitude={lon}, Altitude={alt}"
+    
 def drone_control():
     drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(10, 
                             drone.target_system,                    #System ID
@@ -199,6 +205,71 @@ def drone_control():
                             0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
     drone_tel_location()
 
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371000  # Approximate radius of earth in meters
+    
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+
+    a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return R * c
+
+# Asynchronous function to wait until the drone reaches the waypoint
+async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=2, timeout=60):
+    start_time = asyncio.get_event_loop().time()
+    while True:
+        # Get the current position of the drone
+        position_msg = drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+        if position_msg:
+            lat_current = position_msg.lat / 1e7
+            lon_current = position_msg.lon / 1e7
+            alt_current = position_msg.relative_alt / 1000  # Relative altitude in meters
+            
+            # Calculate the distance to the target waypoint
+            distance = calculate_distance(lat_current, lon_current, lat_target, lon_target)
+            
+            print(f"Current Position: Latitude={lat_current}, Longitude={lon_current}, Altitude={alt_current}")
+            print(f"Distance to target: {distance} meters, Altitude difference: {abs(alt_current - altitude_target)} meters")
+            
+            if distance <= tolerance <= tolerance:
+                print("Reached waypoint!")
+                break
+
+        # Check for timeout
+        if asyncio.get_event_loop().time() - start_time > timeout:
+            print("Timeout: Did not reach waypoint in time.")
+            break
+            
+        await asyncio.sleep(1)  # Non-blocking sleep, check every second
+
+
+# Drone will continuously follow path
+async def drone_path(path_coords):
+
+    for wp in path_coords:
+        lat = wp[0]
+        lng = wp[1]
+        drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_global_int_message(10, 
+                                drone.target_system,                    #System ID
+                                drone.target_component,                 #Flight Controller ID 
+                                mavutil.mavlink.MAV_FRAME_GLOBAL_TERRAIN_ALT_INT,    #Coordinate Frame
+                                int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
+                                int(lat * 1e7),                         # Latitude in degrees * 1e7 (MAVLink expects it in this format)
+                                int(lng * 1e7),                         # Longitude in degrees * 1e7 (MAVLink expects it in this format)                                0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
+                                10,                                     # altitude
+                                0, 0, 0,
+                                0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
+                                0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
+        drone_tel_location()
+
+        # Wait until the drone reaches the waypoint
+
+        print(curr_z)
+        await wait_until_reached(lat, lng, curr_z)
 
 def drone_control_up(): 
 
@@ -256,26 +327,40 @@ def main():
 # Asynchronous function to handle a connected client
 async def handle_client(reader, writer):
     
+    global drone_task_path
+
     print("Handle Client")
     request = None  # Initialize the request variable
 
     # Read the client's message (up to 255 bytes) and decode from utf8
-    request = (await reader.read(255)).decode('utf8').strip()
-    
+    request = (await reader.readline()).decode('utf8').strip()  # Read until newline
+
     request = request.strip()
 
-    command = str(request)
+    # Split the request and retrieve the first token as command
+    tokens = request.split()
+    command = tokens[0] if tokens else ""
 
     print("found command: " + str(command))
+
+    command = str(command)
+
     if command == 'wp':                 # Init Waypoint Path
-        request = (await reader.read(4096)).decode('utf8')
         print("Waypoint")
 
-        tokens = request.split()
-
-        params = [float(x) for x in tokens]
-        request = params
-        print(request)
+        lat_lon_pairs = []
+        # Iterate through the remaining tokens in pairs
+        for i in range(1, len(tokens), 2):  # Start from index 1, step 2 (pair by pair)
+            try:
+                lat = float(tokens[i])
+                lon = float(tokens[i+1])  # Make sure there is a corresponding longitude
+                lat_lon_pairs.append((lat, lon))
+            except (IndexError, ValueError):
+                print(f"Invalid lat/lon pair at index {i}")
+                break
+        print(lat_lon_pairs)
+        drone_task_path = asyncio.create_task(drone_path(lat_lon_pairs))
+        #drone_path(lat_lon_pairs)
         
     if command == 'up':                  
         print("up")   
