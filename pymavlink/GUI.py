@@ -4,8 +4,51 @@ import socket
 import csv
 import datetime 
 import os 
+import folium
+from io import BytesIO
+from PIL import Image, ImageTk
+import math
 
 sock = None
+
+map_frame = None
+map_label = None
+
+# Function to create and save the map with the drone location
+def create_map(lat, lon):
+    # Create a folium map centered on the current drone location
+    folium_map = folium.Map(location=[lat, lon], zoom_start=15)
+    # Add a marker for the current drone location
+    folium.Marker([lat, lon], tooltip="Drone Location").add_to(folium_map)
+
+    # Save the map as an HTML file
+    map_path = os.path.join(os.getcwd(), "drone_map.html")
+    folium_map.save(map_path)
+
+    # Return the map path
+    return map_path
+
+# Function to display the map inside the Tkinter window
+def display_map(lat, lon):
+    global map_label
+    # Create the map
+    map_path = create_map(lat, lon)
+
+    # Convert the map to an image to display it in the Tkinter window
+    with open(map_path, 'rb') as file:
+        img_data = file.read()
+
+    img = Image.open(BytesIO(img_data))
+    img = img.resize((400, 300))  # Resize to fit the window
+    img_tk = ImageTk.PhotoImage(img)
+
+    if map_label is None:
+        map_label = ttk.Label(frame3, image=img_tk)
+        map_label.image = img_tk
+        map_label.pack(pady=20)
+    else:
+        map_label.config(image=img_tk)
+        map_label.image = img_tk
 
 # Function to save drone location to a CSV file
 def save_to_csv(data):
