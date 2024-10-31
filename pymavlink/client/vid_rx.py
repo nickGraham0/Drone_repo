@@ -23,7 +23,7 @@ def vid_rx():
 
     while True:
         while len(data) < payload_size:
-            packet = client_socket.recv(148973) # 4K
+            packet = client_socket.recv(4 * 1024) # 4K
             if not packet: break
             data+=packet
         packed_msg_size = data[:payload_size]
@@ -34,7 +34,7 @@ def vid_rx():
         msg_size = struct.unpack("Q",packed_msg_size)[0]
         
         while len(data) < msg_size:
-            data += client_socket.recv(148973)
+            data += client_socket.recv(4 * 1024)
         frame_data = data[:msg_size]
         data  = data[msg_size:]
         frame = pickle.loads(frame_data)

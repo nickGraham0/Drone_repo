@@ -7,3 +7,5 @@ logs/*
 *.bin
 pymavlink/logs/
 pymavlink/terrain/
+pymavlink/server/Object_Detect/__pycache__/
+pymavlink/client/__pycache__/

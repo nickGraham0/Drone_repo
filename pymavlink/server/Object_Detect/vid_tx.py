@@ -48,7 +48,7 @@ def vid_2_client(vid_frame):
         
         #while(vid.isOpened()):
         #img,frame = vid_frame.read()
-        #vid_frame = imutils.resize(vid_frame,width=320)
+        vid_frame = imutils.resize(vid_frame,width=320)
         a = pickle.dumps(vid_frame)
         message = struct.pack("Q",len(a))+a
         print(len(message))

@@ -208,7 +208,7 @@ nb.add(frame3, text="Window 3")
 def show_frames():
     # Get the latest frame and convert into Image
     #cv2image= cv2.cvtColor(cap.read()[1],cv2.COLOR_BGR2RGB)
-    cv2image= cv2.cvtColor(next(vid_rx())[1],cv2.COLOR_BGR2RGB)
+    cv2image= cv2.cvtColor(next(vid_rx()),cv2.COLOR_BGR2RGB)
     img = Image.fromarray(cv2image)
 
     # Convert image to PhotoImage
