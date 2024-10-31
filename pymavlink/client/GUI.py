@@ -9,10 +9,11 @@ from io import BytesIO
 from PIL import Image, ImageTk
 import math
 import cv2 
+from vid_rx import init_vid_rx, vid_rx
 
 sock = None
 video_path = 'crowd.mp4'
-
+init_vid_rx()
 
 # Function to save drone location to a CSV file
 def save_to_csv(data):
@@ -201,12 +202,13 @@ label3.pack(pady=50, padx=20)
 nb.add(frame3, text="Window 3")
 
 #https://www.tutorialspoint.com/using-opencv-with-tkinter
-cap= cv2.VideoCapture(video_path)
+#cap= cv2.VideoCapture(video_path)
 
 # Define function to show frame
 def show_frames():
     # Get the latest frame and convert into Image
-    cv2image= cv2.cvtColor(cap.read()[1],cv2.COLOR_BGR2RGB)
+    #cv2image= cv2.cvtColor(cap.read()[1],cv2.COLOR_BGR2RGB)
+    cv2image= cv2.cvtColor(next(vid_rx())[1],cv2.COLOR_BGR2RGB)
     img = Image.fromarray(cv2image)
 
     # Convert image to PhotoImage
