@@ -3,11 +3,13 @@ import numpy
 
 from ultralytics import YOLO
 
-video_path = 'pymavlink/people.mp4'
+video_path = 'pymavlink/crowd.mp4'
 
 #Camera
 cap = cv2.VideoCapture(video_path)
 
+#Code attributed from: https://core-electronics.com.au/guides/raspberry-pi/getting-started-with-yolo-object-and-animal-recognition-on-the-raspberry-pi/
+#Code attributed from: https://github.com/techwithtim/OpenCV-Tutorials/blob/main/tutorial8.py
 
 # Load YOLOv8
 model = YOLO("yolov10x.pt")
@@ -19,9 +21,11 @@ if not cap.isOpened():
 while True:
     # Capture a frame from the camera
     ret, frame = cap.read()
-    
+    #frame = cv2.resize(frame, (640, 480))
+
     # Run YOLO model on the captured frame and store the results
-    results = model(frame)
+    #results = model.track(frame, classes=0)
+    results = model(frame, classes=0)
     
     # Output the visual detection data, we will draw this on our camera preview window
     annotated_frame = results[0].plot()

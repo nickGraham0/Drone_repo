@@ -1,0 +1,26 @@
+##To access windows usb ports using wsl (not used for anything rn)
+
+#powershell w/ admin privelege: https://github.com/dorssel/usbipd-win
+winget install usbipd
+
+usbipd --help
+usbipd list #to see list of usb devices ex. 1-2
+usbipd bind --busid=<BUSID> --force #ex. --busid=1-2
+
+#inside wsl 
+ls /dev/tty* 
+
+
+#example call to mavproxy.py
+mavproxy.py --master=/dev/tty0 --baudrate 115200 --out=udp:127.0.0.1:14550 --console --map
+
+
+#create virtual env  (/mnt/c/Users/Nick/OneDrive/Desktop/Fall2024/ECE_4871/Repo/Drone_repo)
+python3 -m venv objDet_env
+objDet_env myenv/bin/activate
+
+## To install YOLO (works only in virtual env)
+sudo apt update
+sudo apt install python3-pip -y
+pip install -U pip
+pip install ultralytics[export]

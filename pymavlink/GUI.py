@@ -1,54 +1,18 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
+from tkinter import *
 import socket
 import csv
 import datetime 
 import os 
-import folium
 from io import BytesIO
 from PIL import Image, ImageTk
 import math
+import cv2 
 
 sock = None
+video_path = 'crowd.mp4'
 
-map_frame = None
-map_label = None
-
-# Function to create and save the map with the drone location
-def create_map(lat, lon):
-    # Create a folium map centered on the current drone location
-    folium_map = folium.Map(location=[lat, lon], zoom_start=15)
-    # Add a marker for the current drone location
-    folium.Marker([lat, lon], tooltip="Drone Location").add_to(folium_map)
-
-    # Save the map as an HTML file
-    map_path = os.path.join(os.getcwd(), "drone_map.html")
-    folium_map.save(map_path)
-
-    # Return the map path
-    return map_path
-
-# Function to display the map inside the Tkinter window
-def display_map(lat, lon):
-    global map_label
-    # Create the map
-    map_path = create_map(lat, lon)
-
-    # Convert the map to an image to display it in the Tkinter window
-    with open(map_path, 'rb') as file:
-        img_data = file.read()
-
-    img = Image.open(BytesIO(img_data))
-    img = img.resize((400, 300))  # Resize to fit the window
-    img_tk = ImageTk.PhotoImage(img)
-
-    if map_label is None:
-        map_label = ttk.Label(frame3, image=img_tk)
-        map_label.image = img_tk
-        map_label.pack(pady=20)
-    else:
-        map_label.config(image=img_tk)
-        map_label.image = img_tk
 
 # Function to save drone location to a CSV file
 def save_to_csv(data):
@@ -226,14 +190,34 @@ csv_button.grid(row=0, column=1, padx=10, pady=10)
 nb.add(frame1, text="Window 1")
 nb.add(frame2, text="Window 2")
 
+# Add frame4 with input fields as another tab
+nb.add(frame4, text="Upload Waypoints")
+
+
 # Frame 3 (extra window)
 frame3 = ttk.Frame(nb)
 label3 = ttk.Label(frame3, text="This is Window Three")
 label3.pack(pady=50, padx=20)
 nb.add(frame3, text="Window 3")
 
-# Add frame4 with input fields as another tab
-nb.add(frame4, text="Upload Waypoints")
+#https://www.tutorialspoint.com/using-opencv-with-tkinter
+cap= cv2.VideoCapture(video_path)
+
+# Define function to show frame
+def show_frames():
+    # Get the latest frame and convert into Image
+    cv2image= cv2.cvtColor(cap.read()[1],cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(cv2image)
+
+    # Convert image to PhotoImage
+    imgtk = ImageTk.PhotoImage(image = img)
+    label3.imgtk = imgtk
+    label3.configure(image=imgtk)
+
+    # Repeat after an interval to capture continiously
+    label3.after(20, show_frames)
+
+show_frames()
 
 # Pack the notebook into the root window
 nb.pack(padx=5, pady=5, expand=True)
