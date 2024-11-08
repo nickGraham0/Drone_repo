@@ -1,4 +1,4 @@
-from pymavlink.client.GUI_port import send, recieve
+from GUI_port import send, recieve
 
 
 def on_up():

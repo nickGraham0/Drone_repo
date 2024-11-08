@@ -10,13 +10,32 @@ from PIL import Image, ImageTk
 import math
 import cv2 
 from GUI_vid_rx import init_vid_rx, vid_rx
-from pymavlink.client.GUI_port import connect_to_server, send, recieve
+from GUI_port import connect_to_server, send, recieve
 from GUI_csv_util import save_to_csv, open_csv, read_and_process_csv
 from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc
 
+import folium
+
+VIDEO_FEED = False
+
+#===== Map =====
+loc = [33.7756, -84.3963]
+loc2 = [33.7756, -84.3964]
+
+my_map1 = folium.Map(location = loc, zoom_start = 12 )
+
+# CircleMarker with radius
+folium.CircleMarker(location = loc, radius = 50, popup = ' FRI ').add_to(my_map1)
+
+folium.PolyLine(locations = [loc, loc2], line_opacity = 0.5).add_to(my_map1)
+
+# save method of Map object will create a map
+my_map1.save("gui_map.html" )
 
 #===== INIT =====
-init_vid_rx()
+if (VIDEO_FEED == True):
+    init_vid_rx()
+
 root = tk.Tk()
 nb = ttk.Notebook(root)
 
@@ -60,24 +79,25 @@ drone_loc_button.pack(pady=20)
 
 #===== Frame 3 =====
 
-frame3 = ttk.Frame(nb)
-label3 = ttk.Label(frame3, text="Video Feed")
-label3.pack(pady=50, padx=20)
-nb.add(frame3, text="Video Feed")
+if (VIDEO_FEED):
+    frame3 = ttk.Frame(nb)
+    label3 = ttk.Label(frame3, text="Video Feed")
+    label3.pack(pady=50, padx=20)
+    nb.add(frame3, text="Video Feed")
 
-#https://www.tutorialspoint.com/using-opencv-with-tkinter
-# Define Internal function to loop showing frame
-def show_frames():
-    cv2image= cv2.cvtColor(next(vid_rx()),cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(cv2image)
+    #https://www.tutorialspoint.com/using-opencv-with-tkinter
+    # Define Internal function to loop showing frame
+    def show_frames():
+        cv2image= cv2.cvtColor(next(vid_rx()),cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(cv2image)
 
-    imgtk = ImageTk.PhotoImage(image = img)
-    label3.imgtk = imgtk
-    label3.configure(image=imgtk)
+        imgtk = ImageTk.PhotoImage(image = img)
+        label3.imgtk = imgtk
+        label3.configure(image=imgtk)
 
-    label3.after(20, show_frames)
+        label3.after(20, show_frames)
 
-show_frames()
+    show_frames()
 
 #===== Frame 4 =====
 
