@@ -1,4 +1,4 @@
-from GUI_server import send, recieve
+from pymavlink.client.GUI_port import send, recieve
 
 
 def on_up():
@@ -24,3 +24,16 @@ def on_drone_loc():
     if msg: 
         print(msg)
         #save_to_csv(msg)
+
+def on_drone_takeoff():
+    print("Drone Takeoff button pressed")
+    send("takeoff\n")
+
+def on_drone_land():
+    print("Drone Land button pressed")
+    send("takeoff\n")
+
+def on_drone_init():
+    print("Drone init signaled")
+    recieve()
+    #Drone Init Light turns on

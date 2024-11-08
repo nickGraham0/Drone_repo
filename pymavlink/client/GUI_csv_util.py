@@ -1,7 +1,7 @@
 import csv
 import datetime 
 from tkinter import ttk, filedialog
-from GUI_server import send
+from pymavlink.client.GUI_port import send
 import os 
 
 def save_to_csv(data):
