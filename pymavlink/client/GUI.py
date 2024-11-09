@@ -14,23 +14,14 @@ from GUI_port import connect_to_server, send, recieve
 from GUI_csv_util import save_to_csv, open_csv, read_and_process_csv
 from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc
 
+from GUI_map import update_drone_loc, refresh_map
+import asyncio
 import folium
+
+from tkhtmlview import HTMLLabel
 
 VIDEO_FEED = False
 
-#===== Map =====
-loc = [33.7756, -84.3963]
-loc2 = [33.7756, -84.3964]
-
-my_map1 = folium.Map(location = loc, zoom_start = 12 )
-
-# CircleMarker with radius
-folium.CircleMarker(location = loc, radius = 50, popup = ' FRI ').add_to(my_map1)
-
-folium.PolyLine(locations = [loc, loc2], line_opacity = 0.5).add_to(my_map1)
-
-# save method of Map object will create a map
-my_map1.save("gui_map.html" )
 
 #===== INIT =====
 if (VIDEO_FEED == True):
@@ -38,6 +29,25 @@ if (VIDEO_FEED == True):
 
 root = tk.Tk()
 nb = ttk.Notebook(root)
+
+#===== Map =====
+
+#asyncio.create_task(update_drone_loc())
+
+# Frame for the map
+frame5 = ttk.Frame(root)
+frame5.pack(fill="both", expand=True)
+
+# Display the map using HTMLLabel from tkhtmlview
+map_label = HTMLLabel(frame5, html=open("gui_map.html").read())
+map_label.pack(fill="both", expand=True)
+
+#asyncio.create_task(refresh_map(map_label, root))
+
+
+#===== Async Loop =====
+
+#asyncio.gather(update_drone_loc(), refresh_map(map_label, root))
 
 #===== Frame 1 =====
 
@@ -117,4 +127,22 @@ nb.add(frame4, text="Waypoints")
 nb.pack(padx=5, pady=5, expand=True)
 
 # Start the Tkinter event loop
+
+# ===== Async Tasks =====
+
+async def update_drone_loc_task():
+    await update_drone_loc()
+
+async def refresh_map_task():
+    await refresh_map(map_label, root)
+
+# Function to manage asyncio tasks periodically in Tkinter's main loop
+def periodic_asyncio_tasks():
+    asyncio.create_task(update_drone_loc_task())
+    asyncio.create_task(refresh_map_task())
+    root.after(1000, periodic_asyncio_tasks)  # Schedule again in 1 second
+
+# Start the periodic asyncio task runner
+root.after(0, periodic_asyncio_tasks)
+
 root.mainloop()
