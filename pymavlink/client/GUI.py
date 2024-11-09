@@ -10,13 +10,16 @@ from PIL import Image, ImageTk
 import math
 import cv2 
 from GUI_vid_rx import init_vid_rx, vid_rx
-from pymavlink.client.GUI_port import connect_to_server, send, recieve
+from GUI_port import connect_to_server, send, recieve
 from GUI_csv_util import save_to_csv, open_csv, read_and_process_csv
 from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc
 
+VID_CHECK = False
 
 #===== INIT =====
-init_vid_rx()
+if VID_CHECK == True:
+    init_vid_rx()
+
 root = tk.Tk()
 nb = ttk.Notebook(root)
 
@@ -65,19 +68,20 @@ label3 = ttk.Label(frame3, text="Video Feed")
 label3.pack(pady=50, padx=20)
 nb.add(frame3, text="Video Feed")
 
-#https://www.tutorialspoint.com/using-opencv-with-tkinter
-# Define Internal function to loop showing frame
-def show_frames():
-    cv2image= cv2.cvtColor(next(vid_rx()),cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(cv2image)
+if (VID_CHECK == TRUE):
+    #https://www.tutorialspoint.com/using-opencv-with-tkinter
+    # Define Internal function to loop showing frame
+    def show_frames():
+        cv2image= cv2.cvtColor(next(vid_rx()),cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(cv2image)
 
-    imgtk = ImageTk.PhotoImage(image = img)
-    label3.imgtk = imgtk
-    label3.configure(image=imgtk)
+        imgtk = ImageTk.PhotoImage(image = img)
+        label3.imgtk = imgtk
+        label3.configure(image=imgtk)
 
-    label3.after(20, show_frames)
+        label3.after(20, show_frames)
 
-show_frames()
+    show_frames()
 
 #===== Frame 4 =====
 
