@@ -14,7 +14,7 @@ from GUI_port import connect_to_server, send, recieve
 from GUI_csv_util import save_to_csv, open_csv, read_and_process_csv
 from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc
 
-VID_CHECK = False
+VID_CHECK = True
 
 #===== INIT =====
 if VID_CHECK == True:
