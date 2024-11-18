@@ -7,22 +7,27 @@ from vid_tx import init_vid_tx, vid_2_client
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 import time
+import os
+current_dir = os.getcwd()  # Check the current working directory
 
 DELAY = 1
 video_tx = False
 video_path = 'crowd.mp4'
-
+video_path = os.path.join(current_dir, 'crowd.mp4')
 #Camera
-cap = cv2.VideoCapture(video_path)
+#cap = cv2.VideoCapture(video_path)
+cap = cv2.VideoCapture(0)
 
 #Code attributed from: https://core-electronics.com.au/guides/raspberry-pi/getting-started-with-yolo-object-and-animal-recognition-on-the-raspberry-pi/
 #Code attributed from: https://github.com/techwithtim/OpenCV-Tutorials/blob/main/tutorial8.py
 
 model = YOLO("yolov10n.pt")
 
+'''
 if not cap.isOpened():
     print("Error: Could not open video file.")
     exit()
+'''
 
 if video_tx:
     init_vid_tx()
@@ -55,7 +60,18 @@ while True:
 
         detections = results[0].boxes  # Get bounding box results
 
-        print(detections)
+        # Extract bounding boxes
+        for box in results[0].boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())  # Get bounding box coordinates
+            cropped_image = frame[y1:y2, x1:x2]  # Crop the bounding box area
+
+            # Display the cropped image
+            cv2.imshow("Cropped Image", cropped_image)
+
+            # Break if 'q' is pressed
+            if cv2.waitKey(1) == ord("q"):
+                break
+
 
         # Iterate through each detection to track new persons
         for box in detections:
@@ -68,6 +84,7 @@ while True:
                     detected_person_ids.add(obj_id)  # Add new person ID to the set
                     print(f"New person detected! ID: {obj_id}")
         
+        ''' 
         annotated_frame = results[0].plot()
         
         inference_time = results[0].speed['inference']
@@ -80,19 +97,9 @@ while True:
         text_y = text_size[1] + 10  # 10 pixels from the top
 
         cv2.putText(annotated_frame, text, (text_x, text_y), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
-    else:
+
+        cv2.imshow("Camera", annotated_frame)
         '''
-        if annotated_frame is not None:
-            #print(dir(annotated_frame))
-            #annotated_frame.imag = frame
-            print("nothing")
-        else:
-        '''
-        annotated_frame = frame
-    cv2.imshow("Camera", annotated_frame)
-
-
-
     if video_tx:
         vid_2_client(annotated_frame)
     '''

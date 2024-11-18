@@ -1,7 +1,6 @@
 imutils==0.5.4
-numpy==1.21.5
+numpy>=1.23.0
 opencv_python==4.10.0.84
 Pillow==9.0.1
-Pillow==11.0.0
 pymavlink==2.4.42
 ultralytics==8.3.26
