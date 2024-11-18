@@ -12,24 +12,16 @@ current_dir = os.getcwd()  # Check the current working directory
 
 DELAY = 0
 video_tx = False
-video_path = 'crowd.mp4'
-video_path = os.path.join(current_dir, 'crowd.mp4')
-#Camera
-#cap = cv2.VideoCapture(video_path)
 cap = cv2.VideoCapture(0)
+#cap = cv2.VideoCapture('crowd.mp4')
 
 #Code attributed from: https://core-electronics.com.au/guides/raspberry-pi/getting-started-with-yolo-object-and-animal-recognition-on-the-raspberry-pi/
 #Code attributed from: https://github.com/techwithtim/OpenCV-Tutorials/blob/main/tutorial8.py
 
 device = "cuda"  # Use "cpu" if a GPU is not available
-model = YOLO("yolov10n.pt")
+model = YOLO("yolov10x.pt")
 model.to('cuda')
 
-'''
-if not cap.isOpened():
-    print("Error: Could not open video file.")
-    exit()
-'''
 
 if video_tx:
     init_vid_tx()
@@ -45,38 +37,38 @@ annotated_frame = None
 while True:
     # Capture a frame from the camera
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (640, 480))
+    #frame = cv2.resize(frame, (640, 480))
 
     current_time = time.time()
     if current_time - last_time >= DELAY:
         last_time = current_time
 
-        results = model.track(frame, classes=0)
+        results = model.track(frame, classes=0, conf=0.9)
                 
         detections = results[0].boxes  # Get bounding box results
 
-        # Extract bounding boxes
-        for box in results[0].boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())  # Get bounding box coordinates
-            cropped_image = frame[y1:y2, x1:x2]  # Crop the bounding box area
+    # Iterate through each detection to track new persons
+    for box in results[0].boxes:
+        # Get unique ID for the object (if available)
+        obj_id = box.id if hasattr(box, 'id') else None  # Check if 'id' attribute exists
+        if obj_id is not None:
+            # Convert tensor ID to a plain type (e.g., integer or string)
+            obj_id = obj_id.item() if obj_id.numel() == 1 else tuple(obj_id.tolist())
+            
+            # Check if this person is new
+            #if obj_id not in detected_person_ids:
+            if True:
+                #detected_person_ids.add(obj_id)  # Add the new person ID to the set
+                #print(f"New person detected! ID: {obj_id}")
 
-            #cv2.imshow("Cropped Image", cropped_image)
+                # Get bounding box coordinates
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
 
-            if cv2.waitKey(1) == ord("q"):
-                break
+                # Crop the image for the new person
+                cropped_image = frame[y1:y2, x1:x2]
 
-
-        # Iterate through each detection to track new persons
-        for box in detections:
-            obj_id = box.id if hasattr(box, 'id') else None  # Get unique ID if available
-            if obj_id is not None:
-                # Convert tensor ID to a plain type (e.g., integer or string)
-                obj_id = obj_id.item() if obj_id.numel() == 1 else tuple(obj_id.tolist())
-                
-                if obj_id not in detected_person_ids:  # Check for new person
-                    detected_person_ids.add(obj_id)  # Add new person ID to the set
-                    print(f"New person detected! ID: {obj_id}")
-        
+                # Display the cropped image for the new person
+                cv2.imshow(f"New Person ID: {obj_id}", cropped_image)
  
         annotated_frame = results[0].plot()
         
@@ -95,10 +87,6 @@ while True:
 
     if video_tx:
         vid_2_client(annotated_frame)
-    '''
-    else:
-        time.sleep(1)
-    '''
     
     # Exit the program if q is pressed
     if cv2.waitKey(1) == ord("q"):
