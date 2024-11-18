@@ -10,7 +10,7 @@ import time
 import os
 current_dir = os.getcwd()  # Check the current working directory
 
-DELAY = 1
+DELAY = 0
 video_tx = False
 video_path = 'crowd.mp4'
 video_path = os.path.join(current_dir, 'crowd.mp4')
@@ -21,7 +21,9 @@ cap = cv2.VideoCapture(0)
 #Code attributed from: https://core-electronics.com.au/guides/raspberry-pi/getting-started-with-yolo-object-and-animal-recognition-on-the-raspberry-pi/
 #Code attributed from: https://github.com/techwithtim/OpenCV-Tutorials/blob/main/tutorial8.py
 
+device = "cuda"  # Use "cpu" if a GPU is not available
 model = YOLO("yolov10n.pt")
+model.to('cuda')
 
 '''
 if not cap.isOpened():
@@ -37,27 +39,20 @@ detected_person_ids = set()
 
 # Time of Previous Model Use
 last_time = time.time()
-#frame = cv2.resize(frame, (640, 480))
 
 annotated_frame = None
 
 while True:
     # Capture a frame from the camera
     ret, frame = cap.read()
+    frame = cv2.resize(frame, (640, 480))
 
     current_time = time.time()
     if current_time - last_time >= DELAY:
         last_time = current_time
 
-        # Run YOLO model on the captured frame and store the results
         results = model.track(frame, classes=0)
-        #results = model(frame, classes=0)
                 
-        if len(results) > 0:
-            print(f"Person(s) detected! {len(results[0])}")
-        else:
-            print("No person detected in this frame.")
-
         detections = results[0].boxes  # Get bounding box results
 
         # Extract bounding boxes
@@ -65,10 +60,8 @@ while True:
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())  # Get bounding box coordinates
             cropped_image = frame[y1:y2, x1:x2]  # Crop the bounding box area
 
-            # Display the cropped image
-            cv2.imshow("Cropped Image", cropped_image)
+            #cv2.imshow("Cropped Image", cropped_image)
 
-            # Break if 'q' is pressed
             if cv2.waitKey(1) == ord("q"):
                 break
 
@@ -84,7 +77,7 @@ while True:
                     detected_person_ids.add(obj_id)  # Add new person ID to the set
                     print(f"New person detected! ID: {obj_id}")
         
-        ''' 
+ 
         annotated_frame = results[0].plot()
         
         inference_time = results[0].speed['inference']
@@ -99,7 +92,7 @@ while True:
         cv2.putText(annotated_frame, text, (text_x, text_y), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
         cv2.imshow("Camera", annotated_frame)
-        '''
+
     if video_tx:
         vid_2_client(annotated_frame)
     '''
