@@ -1,3 +1,6 @@
+#Code attributed from: https://core-electronics.com.au/guides/raspberry-pi/getting-started-with-yolo-object-and-animal-recognition-on-the-raspberry-pi/
+#Code attributed from: https://github.com/techwithtim/OpenCV-Tutorials/blob/main/tutorial8.py
+
 import cv2
 import numpy
 import socket 
@@ -8,34 +11,38 @@ from ultralytics import YOLO
 from ultralytics.engine.results import Results
 import time
 import os
+import torch 
+
 current_dir = os.getcwd()  # Check the current working directory
 
 DELAY = 0
+CONFIDENCE = 0.8
+PERSON = 0
+
 video_tx = False
 cap = cv2.VideoCapture(0)
 #cap = cv2.VideoCapture('crowd.mp4')
 
-#Code attributed from: https://core-electronics.com.au/guides/raspberry-pi/getting-started-with-yolo-object-and-animal-recognition-on-the-raspberry-pi/
-#Code attributed from: https://github.com/techwithtim/OpenCV-Tutorials/blob/main/tutorial8.py
 
-device = "cuda"  # Use "cpu" if a GPU is not available
 model = YOLO("yolov10x.pt")
-model.to('cuda')
+if not torch.cuda.is_available():
+    model.to('cpu')
+else:
+    model.to('cuda')
+
+
 
 
 if video_tx:
     init_vid_tx()
 
-# Set to keep track of detected person IDs (if YOLO provides unique IDs, e.g., via object tracking)
 detected_person_ids = set()
 
-# Time of Previous Model Use
 last_time = time.time()
 
 annotated_frame = None
 
 while True:
-    # Capture a frame from the camera
     ret, frame = cap.read()
     #frame = cv2.resize(frame, (640, 480))
 
@@ -43,37 +50,25 @@ while True:
     if current_time - last_time >= DELAY:
         last_time = current_time
 
-        results = model.track(frame, classes=0, conf=0.9)
+        results = model.track(frame, classes=PERSON, conf=CONFIDENCE)
                 
         detections = results[0].boxes  # Get bounding box results
 
-    # Iterate through each detection to track new persons
     for box in results[0].boxes:
-        # Get unique ID for the object (if available)
         obj_id = box.id if hasattr(box, 'id') else None  # Check if 'id' attribute exists
         if obj_id is not None:
-            # Convert tensor ID to a plain type (e.g., integer or string)
             obj_id = obj_id.item() if obj_id.numel() == 1 else tuple(obj_id.tolist())
             
-            # Check if this person is new
-            #if obj_id not in detected_person_ids:
-            if True:
-                #detected_person_ids.add(obj_id)  # Add the new person ID to the set
-                #print(f"New person detected! ID: {obj_id}")
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
 
-                # Get bounding box coordinates
-                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+            cropped_image = frame[y1:y2, x1:x2]
 
-                # Crop the image for the new person
-                cropped_image = frame[y1:y2, x1:x2]
-
-                # Display the cropped image for the new person
-                cv2.imshow(f"New Person ID: {obj_id}", cropped_image)
+            cv2.imshow(f"New Person ID: {obj_id}", cropped_image)
  
         annotated_frame = results[0].plot()
         
         inference_time = results[0].speed['inference']
-        fps = 1000 / inference_time  # Convert to milliseconds
+        fps = 1000 / inference_time  
         text = f'FPS: {fps:.1f}'
 
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -83,7 +78,10 @@ while True:
 
         cv2.putText(annotated_frame, text, (text_x, text_y), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
+    if len(results[0]) > 0:
         cv2.imshow("Camera", annotated_frame)
+    else:
+        cv2.imshow("Camera", frame)
 
     if video_tx:
         vid_2_client(annotated_frame)
