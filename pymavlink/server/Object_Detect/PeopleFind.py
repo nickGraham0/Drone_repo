@@ -15,11 +15,13 @@ import torch
 
 current_dir = os.getcwd()  # Check the current working directory
 
+VIDEO = 0
+
 DELAY = 0
 CONFIDENCE = 0.8
 PERSON = 0
 
-video_tx = False
+video_tx = True
 cap = cv2.VideoCapture(0)
 #cap = cv2.VideoCapture('crowd.mp4')
 
@@ -63,8 +65,15 @@ while True:
 
             cropped_image = frame[y1:y2, x1:x2]
 
-            cv2.imshow(f"New Person ID: {obj_id}", cropped_image)
- 
+            
+            if video_tx:
+                vid_2_client(cropped_image, obj_id)
+            else:
+                cv2.imshow(f"New Person ID: {obj_id}", cropped_image)
+
+        else:
+            continue
+
         annotated_frame = results[0].plot()
         
         inference_time = results[0].speed['inference']
@@ -79,12 +88,16 @@ while True:
         cv2.putText(annotated_frame, text, (text_x, text_y), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
     if len(results[0]) > 0:
-        cv2.imshow("Camera", annotated_frame)
+        if video_tx:
+            vid_2_client(annotated_frame, VIDEO)
+        else:
+            cv2.imshow("Camera", annotated_frame)
     else:
-        cv2.imshow("Camera", frame)
+        if video_tx:
+            vid_2_client(frame, VIDEO)
+        else:
+            cv2.imshow("Camera", frame)
 
-    if video_tx:
-        vid_2_client(annotated_frame)
     
     # Exit the program if q is pressed
     if cv2.waitKey(1) == ord("q"):
