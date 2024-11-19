@@ -33,21 +33,31 @@ nb = ttk.Notebook(root)
 video_labels = []
 
 
-seen_ids = {1}  # Track unique IDs
+seen_ids = {0}  # Track unique IDs
 shown_id = tk.IntVar()  # Currently displayed ID for Intruders
-shown_id.set(1)  # Default to ID 0
+shown_id.set(0)  # Default to ID 0
 
-
+# Attributed from https://stackoverflow.com/questions/28412496/updating-optionmenu-from-list
 def update_dropdown_menu(dropdown, option_var, options):
-    """Update dropdown menu with new options."""
     menu = dropdown["menu"]
     menu.delete(0, "end")  # Clear existing options
     for option in options:
         menu.add_command(label=option, command=lambda value=option: option_var.set(value))
 
+#Attributed from https://www.tutorialspoint.com/how-do-i-create-a-popup-window-in-tkinter
+def create_popup(new_id):
+    popup = Toplevel(root)
+    popup.title(f"New Intruder Detected: ID {new_id}")
+    popup.geometry("300x100")
 
+    label = tk.Label(popup, text=f"Intruder detected with ID: {new_id}", font=("Arial", 12))
+    label.pack(pady=20)
+
+    ok_button = tk.Button(popup, text="OK", command=popup.destroy)
+    ok_button.pack(pady=5)
+
+#Attributed from https://www.geeksforgeeks.org/how-to-show-webcam-in-tkinter-window-python/
 def show_frames(labels):
-    """Fetch frames and display them dynamically."""
     global seen_ids
 
     skip = False
@@ -58,6 +68,7 @@ def show_frames(labels):
     if id not in seen_ids:
         seen_ids.add(int(id))
         update_dropdown_menu(id_dropdown, shown_id, sorted(seen_ids))  # Update dropdown
+        create_popup(int(id))  # Show popup for new ID
 
     # Check if the current ID matches the selected one
     if int(id) == 0:

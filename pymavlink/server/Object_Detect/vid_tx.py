@@ -1,7 +1,5 @@
 #https://pyshine.com/Socket-programming-and-openc/
 
-# This code is for the server 
-# Lets import the libraries
 import socket, cv2, pickle,struct,imutils
 import numpy as np
 
@@ -54,8 +52,7 @@ def vid_2_client(vid_frame, id=0):
     global addr
 
     if client_socket:
-        #vid_frame = imutils.resize(vid_frame,width=320, height=320)
-        vid_frame = resize_with_padding(vid_frame, (320, 320))
+        vid_frame = resize_with_padding(vid_frame, (640, 480))
         a = pickle.dumps((id, vid_frame))
         message = struct.pack("Q",len(a))+a
         client_socket.sendall(message)

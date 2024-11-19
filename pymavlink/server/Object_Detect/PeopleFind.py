@@ -18,7 +18,7 @@ current_dir = os.getcwd()  # Check the current working directory
 VIDEO = 0
 
 DELAY = 0
-CONFIDENCE = 0.8
+CONFIDENCE = 0.7
 PERSON = 0
 
 video_tx = True
@@ -26,7 +26,7 @@ cap = cv2.VideoCapture(0)
 #cap = cv2.VideoCapture('crowd.mp4')
 
 
-model = YOLO("yolov10x.pt")
+model = YOLO("yolov10n.pt")
 if not torch.cuda.is_available():
     model.to('cpu')
 else:
@@ -46,7 +46,7 @@ annotated_frame = None
 
 while True:
     ret, frame = cap.read()
-    #frame = cv2.resize(frame, (640, 480))
+    frame = cv2.resize(frame, (640, 480))
 
     current_time = time.time()
     if current_time - last_time >= DELAY:
