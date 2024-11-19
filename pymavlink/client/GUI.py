@@ -14,7 +14,47 @@ from GUI_port import connect_to_server, send, recieve
 from GUI_csv_util import save_to_csv, open_csv, read_and_process_csv
 from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc
 
+from tkinter import Toplevel
+
+
 VID_CHECK = True
+
+video_labels = []
+
+
+def add_video_label(frame, frame_id):
+    """Add a new label for the detected intruder video feed."""
+    global video_labels
+
+    # Check if frame_id already exists
+    if frame_id < len(video_labels):
+        label = video_labels[frame_id]
+    else:
+        # Create a new label for the detection
+        label = tk.Label(video_grid_frame, text=f"Video {frame_id + 1}", width=20, height=10, bg="black", fg="white")
+        label.grid(row=len(video_labels) // 3, column=len(video_labels) % 3, padx=5, pady=5)
+        video_labels.append(label)
+
+    # Display the frame in the label
+    cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(cv2image)
+    imgtk = ImageTk.PhotoImage(image=img)
+    label.imgtk = imgtk
+    label.configure(image=imgtk)
+
+def show_frames(labels):
+    try:
+        frame_id, frame = next(vid_rx())
+
+        # Add or update video label for this frame_id
+        add_video_label(frame, int(frame_id))
+
+        # Schedule the next frame update
+        root.after(20, lambda: show_frames(labels))
+    except StopIteration:
+        print("Video stream ended.")
+
+
 
 #===== INIT =====
 if VID_CHECK == True:
@@ -68,20 +108,32 @@ label3 = ttk.Label(frame3, text="Video Feed")
 label3.pack(pady=50, padx=20)
 nb.add(frame3, text="Video Feed")
 
-if (VID_CHECK == TRUE):
+if (VID_CHECK == True):
     #https://www.tutorialspoint.com/using-opencv-with-tkinter
     # Define Internal function to loop showing frame
-    def show_frames():
-        cv2image= cv2.cvtColor(next(vid_rx()),cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(cv2image)
+    video_labels.append(label3)
 
-        imgtk = ImageTk.PhotoImage(image = img)
-        label3.imgtk = imgtk
-        label3.configure(image=imgtk)
+#===== Frame 5 =====
 
-        label3.after(20, show_frames)
+frame5 = ttk.Frame(nb)
+label5 = ttk.Label(frame5, text="Intruders")
+label5.pack(pady=50, padx=20)
+label5.pack(pady=10, padx=20)
+video_grid_frame = ttk.Frame(frame5)
+video_grid_frame.pack(pady=20)
 
-    show_frames()
+if (VID_CHECK == True):    
+    ''' 
+    for r in range(3):
+            for c in range(3):
+                index = r * 3 + c
+                # Create a Label for each video feed
+                label = tk.Label(video_grid_frame, text=f"Video {index + 1}", width=100, height=100, bg="black", fg="white")
+                label.grid(row=r, column=c, padx=5, pady=5)
+    '''
+    #video_labels.append(label)
+
+nb.add(frame5, text="Intruders")
 
 #===== Frame 4 =====
 
@@ -100,5 +152,10 @@ nb.add(frame4, text="Waypoints")
 
 nb.pack(padx=5, pady=5, expand=True)
 
+show_frames(video_labels)
+
 # Start the Tkinter event loop
 root.mainloop()
+
+
+
