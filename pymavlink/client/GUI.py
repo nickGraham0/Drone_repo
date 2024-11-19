@@ -16,44 +16,7 @@ from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc
 
 from tkinter import Toplevel
 
-
 VID_CHECK = True
-
-video_labels = []
-
-
-def add_video_label(frame, frame_id):
-    """Add a new label for the detected intruder video feed."""
-    global video_labels
-
-    # Check if frame_id already exists
-    if frame_id < len(video_labels):
-        label = video_labels[frame_id]
-    else:
-        # Create a new label for the detection
-        label = tk.Label(video_grid_frame, text=f"Video {frame_id + 1}", width=20, height=10, bg="black", fg="white")
-        label.grid(row=len(video_labels) // 3, column=len(video_labels) % 3, padx=5, pady=5)
-        video_labels.append(label)
-
-    # Display the frame in the label
-    cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(cv2image)
-    imgtk = ImageTk.PhotoImage(image=img)
-    label.imgtk = imgtk
-    label.configure(image=imgtk)
-
-def show_frames(labels):
-    try:
-        frame_id, frame = next(vid_rx())
-
-        # Add or update video label for this frame_id
-        add_video_label(frame, int(frame_id))
-
-        # Schedule the next frame update
-        root.after(20, lambda: show_frames(labels))
-    except StopIteration:
-        print("Video stream ended.")
-
 
 
 #===== INIT =====
@@ -62,6 +25,61 @@ if VID_CHECK == True:
 
 root = tk.Tk()
 nb = ttk.Notebook(root)
+
+
+#=====Variables=====
+
+
+video_labels = []
+
+
+seen_ids = {1}  # Track unique IDs
+shown_id = tk.IntVar()  # Currently displayed ID for Intruders
+shown_id.set(1)  # Default to ID 0
+
+
+def update_dropdown_menu(dropdown, option_var, options):
+    """Update dropdown menu with new options."""
+    menu = dropdown["menu"]
+    menu.delete(0, "end")  # Clear existing options
+    for option in options:
+        menu.add_command(label=option, command=lambda value=option: option_var.set(value))
+
+
+def show_frames(labels):
+    """Fetch frames and display them dynamically."""
+    global seen_ids
+
+    skip = False
+    id, frame = next(vid_rx())  # Fetch ID and frame
+    cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Add new ID to seen_ids and update dropdown menu
+    if id not in seen_ids:
+        seen_ids.add(int(id))
+        update_dropdown_menu(id_dropdown, shown_id, sorted(seen_ids))  # Update dropdown
+
+    # Check if the current ID matches the selected one
+    if int(id) == 0:
+        label = video_labels[0]  # Default video feed
+    elif int(id) == shown_id.get():
+        label = video_labels[1]  # Intruder feed
+    else:
+        skip = True
+
+    if not skip:
+        # Update the label with the current frame
+        img = Image.fromarray(cv2image)
+        imgtk = ImageTk.PhotoImage(image=img)
+        label.imgtk = imgtk
+        label.configure(image=imgtk)
+
+    # Schedule the next frame update
+    root.after(20, lambda: show_frames(labels))
+
+
+
+
 
 #===== Frame 1 =====
 
@@ -118,20 +136,18 @@ if (VID_CHECK == True):
 frame5 = ttk.Frame(nb)
 label5 = ttk.Label(frame5, text="Intruders")
 label5.pack(pady=50, padx=20)
-label5.pack(pady=10, padx=20)
-video_grid_frame = ttk.Frame(frame5)
-video_grid_frame.pack(pady=20)
 
-if (VID_CHECK == True):    
-    ''' 
-    for r in range(3):
-            for c in range(3):
-                index = r * 3 + c
-                # Create a Label for each video feed
-                label = tk.Label(video_grid_frame, text=f"Video {index + 1}", width=100, height=100, bg="black", fg="white")
-                label.grid(row=r, column=c, padx=5, pady=5)
-    '''
-    #video_labels.append(label)
+if (VID_CHECK == True):
+    #https://www.tutorialspoint.com/using-opencv-with-tkinter
+    # Define Internal function to loop showing frame
+    video_labels.append(label5)
+
+# Add dropdown to select ID for Intruders output
+id_dropdown_label = tk.Label(frame5, text="Select ID to View:")
+id_dropdown_label.pack(pady=5)
+
+id_dropdown = tk.OptionMenu(frame5, shown_id, *sorted(seen_ids))  # Dropdown menu
+id_dropdown.pack(pady=10)
 
 nb.add(frame5, text="Intruders")
 
