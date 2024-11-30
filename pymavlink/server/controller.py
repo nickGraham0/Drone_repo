@@ -31,6 +31,10 @@ drone = mavutil.mavlink_connection('COM7', baud=57600)
 
 drone_task_path = None
 
+takeoff_altitude = 3
+takeoff_params = [0,0,0,0,0,0,takeoff_altitude]   #Drone Takeoff to 3m 
+
+
 async def send_to_gui(writer, msg):
     # Send the drone's location back to the client
     writer.write(msg.encode('utf8'))
@@ -318,12 +322,12 @@ def drone_control_right():
 
 def main():
     try:
-        takeoff_altitude = 10
-        takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
+        #takeoff_altitude = 10
+        #takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
         drone_init()
         #exit()
         drone_mode("GUIDED")
-        drone_takeoff(takeoff_params, takeoff_altitude)
+        #drone_takeoff(takeoff_params, takeoff_altitude)
         asyncio.run(run_server())
     finally:
         # Close the MAVLink connection when the program finishes
@@ -368,6 +372,11 @@ async def handle_client(reader, writer):
         print(lat_lon_pairs)
         drone_task_path = asyncio.create_task(drone_path(lat_lon_pairs))
         #drone_path(lat_lon_pairs)
+        
+    if command == 'takeoff':                  
+        print("takeoff") 
+        drone_takeoff(takeoff_params)
+
         
     if command == 'up':                  
         print("up")   

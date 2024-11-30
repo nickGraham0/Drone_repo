@@ -1,5 +1,8 @@
 from GUI_port import send, recieve
 
+def on_takeoff():
+    print("Takeoff button pressed")
+    send("takeoff\n")
 
 def on_up():
     print("Up button pressed")
