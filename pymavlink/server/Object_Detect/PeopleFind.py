@@ -18,7 +18,7 @@ current_dir = os.getcwd()  # Check the current working directory
 VIDEO = 0
 
 DELAY = 0
-CONFIDENCE = 0.7
+CONFIDENCE = 0.4
 PERSON = 0
 
 video_tx = True
@@ -28,8 +28,10 @@ cap = cv2.VideoCapture(0)
 
 model = YOLO("yolov10n.pt")
 if not torch.cuda.is_available():
+    print('Using CPU')
     model.to('cpu')
 else:
+    print('Using GPU')
     model.to('cuda')
 
 

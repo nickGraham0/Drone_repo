@@ -16,13 +16,18 @@ USE_YAW_RATE        = 0b010111111111  # 0x05FF / 1535 (decimal)
 arm     = 1
 disarm  = 0
 
-altitude = -10
+altitude = -1.5
 
 curr_x = 0
 curr_y = 0
 curr_z = altitude
 
-drone = mavutil.mavlink_connection('udpin:localhost:14550') 
+#drone = mavutil.mavlink_connection('udpin:localhost:14550') 
+drone = mavutil.mavlink_connection('COM7', baud=57600)
+#drone = mavutil.mavlink_connection('COM5') 
+#print(f"Baud rate used by the connection: {drone.port.baudrate}")
+
+#drone = mavutil.mavlink_connection('192.168.4.2:5760') 
 
 drone_task_path = None
 
@@ -129,7 +134,7 @@ def drone_init():
     #=======================INIT===========================
     drone.wait_heartbeat()
     print("Heartbeat from system (system %u component %u)" % (drone.target_system, drone.target_component))
-    wait_for_ardupilot_ready()
+    #wait_for_ardupilot_ready()
 
 def drone_mode(mode = "GUIDED"):
     #======================GUIDED MODE=============================
@@ -316,6 +321,7 @@ def main():
         takeoff_altitude = 10
         takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
         drone_init()
+        #exit()
         drone_mode("GUIDED")
         drone_takeoff(takeoff_params, takeoff_altitude)
         asyncio.run(run_server())

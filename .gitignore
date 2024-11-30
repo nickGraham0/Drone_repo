@@ -9,3 +9,4 @@ pymavlink/logs/
 pymavlink/terrain/
 pymavlink/server/Object_Detect/__pycache__/
 pymavlink/client/__pycache__/
+pymavlink/server/Object_Detect/__pycache__/vid_tx.cpython-310.pyc
