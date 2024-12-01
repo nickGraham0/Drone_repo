@@ -161,6 +161,27 @@ def drone_mode(mode = "GUIDED"):
 
     time.sleep(10)
 
+#https://github.com/mustafa-gokce/ardupilot-software-development/blob/main/pymavlink/arm-disarm.py
+def drone_arm(timeout=60):
+    # Arm the Takeoff System
+
+    for _ in range(timeout):
+        drone.mav.command_long_send(drone.target_system, 
+                                    drone.target_component,
+                                    mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 
+                                    0, 
+                                    arm, 
+                                    0, 0, 0, 0, 0, 0)
+
+        arm_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
+        if arm_msg and arm_msg.command == mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM:
+            if arm_msg.result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
+                print("Drone successfully armed.")
+                return True
+
+        time.sleep(1)
+
+
 def drone_rtl():
 
     drone.mav.command_long_send(drone.target_system, 
@@ -186,15 +207,7 @@ def drone_land():
 def drone_takeoff(takeoff_params, arm_time = 10):
     #======================TAKE OFF=============================
     # Arm the Takeoff System
-    drone.mav.command_long_send(drone.target_system, 
-                                drone.target_component,
-                                mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 
-                                0, 
-                                arm, 
-                                0, 0, 0, 0, 0, 0)
-
-    arm_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
-    print(f"Arm ACK:  {arm_msg}")
+    drone_arm()
 
     # Command Takeoff
     drone.mav.command_long_send(drone.target_system, 
