@@ -12,7 +12,7 @@ import cv2
 from GUI_vid_rx import init_vid_rx, vid_rx
 from GUI_port import connect_to_server, send, recieve
 from GUI_csv_util import save_to_csv, open_csv, read_and_process_csv
-from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc, on_takeoff, on_land
+from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc, on_takeoff, on_land, on_rtl
 
 from tkinter import Toplevel
 
@@ -187,6 +187,9 @@ takeoff_button.grid(row=0, column=1, padx=10, pady=10)
 
 land_button = ttk.Button(frame6, text="Land", command=on_land)
 land_button.grid(row=1, column=1, padx=10, pady=10)
+
+land_button = ttk.Button(frame6, text="Rtl", command=on_rtl)
+land_button.grid(row=2, column=1, padx=10, pady=10)
 
 
 nb.add(frame6, text="Takeoff/Land")

@@ -1,5 +1,10 @@
 from GUI_port import send, recieve
 
+def on_rtl():
+    print("rtl button pressed")
+    send("rtl\n")
+
+
 def on_land():
     print("Land button pressed")
     send("land\n")

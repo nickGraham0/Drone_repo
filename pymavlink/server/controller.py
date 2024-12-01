@@ -45,7 +45,7 @@ async def send_to_gui(writer, msg):
     writer.close()
     await writer.wait_closed()
 
-def wait_for_ardupilot_ready():
+def wait_for_ardupilot_ready(timeout=60):
     print("Waiting for ArduPilot to be ready...")
 
     barometer1_calibrated = False
@@ -161,7 +161,19 @@ def drone_mode(mode = "GUIDED"):
 
     time.sleep(10)
 
-def drone_land(rtl=False):
+def drone_rtl():
+
+    drone.mav.command_long_send(drone.target_system, 
+                                    drone.target_component,
+                                    mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 
+                                    0,                
+                                    0,0,0,0,0,0,takeoff_altitude)
+
+    rtl_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
+    print(f"rtl ACK:  {rtl_msg}")    
+
+def drone_land():
+
     drone.mav.command_long_send(drone.target_system, 
                                     drone.target_component,
                                     mavutil.mavlink.MAV_CMD_NAV_LAND, 
@@ -391,10 +403,13 @@ async def handle_client(reader, writer):
 
     if command == 'land':                  
         print("land") 
-        drone_mode("GUIDED")
+        #drone_mode("GUIDED")
         drone_land()
 
-
+    if command == 'rtl':                  
+        print("rtl") 
+        #drone_mode("GUIDED")
+        drone_rtl()
         
     if command == 'up':                  
         print("up")   
