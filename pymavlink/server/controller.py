@@ -22,8 +22,8 @@ curr_x = 0
 curr_y = 0
 curr_z = altitude
 
-drone = mavutil.mavlink_connection('udpin:localhost:14550') 
-#drone = mavutil.mavlink_connection('COM7', baud=57600)
+#drone = mavutil.mavlink_connection('udpin:localhost:14550') 
+drone = mavutil.mavlink_connection('COM7', baud=57600)
 #drone = mavutil.mavlink_connection('COM5') 
 #print(f"Baud rate used by the connection: {drone.port.baudrate}")
 
@@ -306,7 +306,7 @@ async def drone_path(path_coords):
                                 int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
                                 int(lat * 1e7),                         # Latitude in degrees * 1e7 (MAVLink expects it in this format)
                                 int(lng * 1e7),                         # Longitude in degrees * 1e7 (MAVLink expects it in this format)                                0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
-                                10,                                     # altitude
+                                -1 * altitude,                                     # altitude
                                 0, 0, 0,
                                 0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
                                 0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)

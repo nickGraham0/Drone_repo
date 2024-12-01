@@ -16,7 +16,7 @@ from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc, on_tak
 
 from tkinter import Toplevel
 
-VID_CHECK = False
+VID_CHECK = True
 
 
 #===== INIT =====
