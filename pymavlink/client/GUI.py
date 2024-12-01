@@ -12,7 +12,7 @@ import cv2
 from GUI_vid_rx import init_vid_rx, vid_rx
 from GUI_port import connect_to_server, send, recieve
 from GUI_csv_util import save_to_csv, open_csv, read_and_process_csv
-from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc, on_takeoff
+from GUI_handlers import on_down, on_left, on_right, on_up, on_drone_loc, on_takeoff, on_land
 
 from tkinter import Toplevel
 
@@ -179,13 +179,17 @@ nb.add(frame4, text="Waypoints")
 
 frame6 = ttk.Frame(nb)
 
-csv_label = ttk.Label(frame6, text="Takeoff")
-csv_label.grid(row=0, column=0, padx=10, pady=10)
+takeoff_land_label = ttk.Label(frame6, text="Takeoff/Land")
+takeoff_land_label.grid(row=0, column=0, padx=10, pady=10)
 
-csv_button = ttk.Button(frame6, text="Takeoff", command=on_takeoff)
-csv_button.grid(row=0, column=1, padx=10, pady=10)
+takeoff_button = ttk.Button(frame6, text="Takeoff", command=on_takeoff)
+takeoff_button.grid(row=0, column=1, padx=10, pady=10)
 
-nb.add(frame6, text="Takeoff")
+land_button = ttk.Button(frame6, text="Land", command=on_land)
+land_button.grid(row=1, column=1, padx=10, pady=10)
+
+
+nb.add(frame6, text="Takeoff/Land")
 
 
 #===== MainLoop =====#

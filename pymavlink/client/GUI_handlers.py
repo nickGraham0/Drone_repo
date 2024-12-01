@@ -1,5 +1,10 @@
 from GUI_port import send, recieve
 
+def on_land():
+    print("Land button pressed")
+    send("land\n")
+
+
 def on_takeoff():
     print("Takeoff button pressed")
     send("takeoff\n")

@@ -22,8 +22,8 @@ curr_x = 0
 curr_y = 0
 curr_z = altitude
 
-#drone = mavutil.mavlink_connection('udpin:localhost:14550') 
-drone = mavutil.mavlink_connection('COM7', baud=57600)
+drone = mavutil.mavlink_connection('udpin:localhost:14550') 
+#drone = mavutil.mavlink_connection('COM7', baud=57600)
 #drone = mavutil.mavlink_connection('COM5') 
 #print(f"Baud rate used by the connection: {drone.port.baudrate}")
 
@@ -161,6 +161,16 @@ def drone_mode(mode = "GUIDED"):
 
     time.sleep(10)
 
+def drone_land(rtl=False):
+    drone.mav.command_long_send(drone.target_system, 
+                                    drone.target_component,
+                                    mavutil.mavlink.MAV_CMD_NAV_LAND, 
+                                    0,                
+                                    0,0,0,0,0,0,0)
+
+    landing_msg = drone.recv_match(type='COMMAND_ACK', blocking=True, timeout=3)
+    print(f"Landing ACK:  {landing_msg}")    
+
 def drone_takeoff(takeoff_params, arm_time = 10):
     #======================TAKE OFF=============================
     # Arm the Takeoff System
@@ -260,6 +270,7 @@ async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=
 async def drone_path(path_coords):
 
     print(path_coords)
+    #while True:
     for wp in path_coords:
         lat = wp[0]
         lng = wp[1]
@@ -326,7 +337,7 @@ def main():
         #takeoff_params = [0,0,0,0,0,0,10]   #Drone Takeoff to 10m 
         drone_init()
         #exit()
-        drone_mode("GUIDED")
+        #drone_mode("GUIDED")
         #drone_takeoff(takeoff_params, takeoff_altitude)
         asyncio.run(run_server())
     finally:
@@ -375,7 +386,14 @@ async def handle_client(reader, writer):
         
     if command == 'takeoff':                  
         print("takeoff") 
+        drone_mode("GUIDED")
         drone_takeoff(takeoff_params)
+
+    if command == 'land':                  
+        print("land") 
+        drone_mode("GUIDED")
+        drone_land()
+
 
         
     if command == 'up':                  
