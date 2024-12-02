@@ -263,7 +263,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return R * c
 
 # Asynchronous function to wait until the drone reaches the waypoint
-async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=2, timeout=60):
+async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=10, timeout=60):
     start_time = asyncio.get_event_loop().time()
     while True:
         # Get the current position of the drone
@@ -279,10 +279,13 @@ async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=
             #print(f"Current Position: Latitude={lat_current}, Longitude={lon_current}, Altitude={alt_current}")
             #print(f"Distance to target: {distance} meters, Altitude difference: {abs(alt_current - altitude_target)} meters")
             
-            if distance <= tolerance <= tolerance:
+            if distance <= tolerance:
                 print("Reached waypoint!")
                 break
-
+            else:
+                print("Tolerance")
+                print(distance)
+                
         # Check for timeout
         if asyncio.get_event_loop().time() - start_time > timeout:
             print("Timeout: Did not reach waypoint in time.")
@@ -302,11 +305,11 @@ async def drone_path(path_coords):
         drone.mav.send(mavutil.mavlink.MAVLink_set_position_target_global_int_message(10, 
                                 drone.target_system,                    #System ID
                                 drone.target_component,                 #Flight Controller ID 
-                                mavutil.mavlink.MAV_FRAME_GLOBAL_TERRAIN_ALT_INT,    #Coordinate Frame
+                                mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,    #Coordinate Frame
                                 int(USE_POSITION),                      #Byte Mask of Ignored (1) fields:  bit1:PosX, bit2:PosY, bit3:PosZ, bit4:VelX, bit5:VelY, bit6:VelZ, bit7:AccX, bit8:AccY, bit9:AccZ, bit11:yaw, bit12:yaw rate
                                 int(lat * 1e7),                         # Latitude in degrees * 1e7 (MAVLink expects it in this format)
                                 int(lng * 1e7),                         # Longitude in degrees * 1e7 (MAVLink expects it in this format)                                0, 0, 0,                                # Velocity (x, y, z) = 0, since we're moving by position
-                                -1 * altitude,                                     # altitude
+                                3,                                     # altitude
                                 0, 0, 0,
                                 0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
                                 0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
@@ -323,7 +326,7 @@ def drone_control_up():
     global curr_y
     global curr_z
 
-    curr_x += 10
+    curr_x += 3
 
     drone_control()
 
@@ -333,7 +336,7 @@ def drone_control_down():
     global curr_y
     global curr_z
 
-    curr_x -= 10
+    curr_x -= 3
 
     drone_control()
 
@@ -343,7 +346,7 @@ def drone_control_left():
     global curr_y
     global curr_z
 
-    curr_y -= 10
+    curr_y -= 3
 
     drone_control()
 
@@ -352,7 +355,7 @@ def drone_control_right():
     global curr_y
     global curr_z
 
-    curr_y += 10
+    curr_y += 3
 
     drone_control()
 
