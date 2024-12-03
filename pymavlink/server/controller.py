@@ -16,7 +16,7 @@ USE_YAW_RATE        = 0b010111111111  # 0x05FF / 1535 (decimal)
 arm     = 1
 disarm  = 0
 
-altitude = -1.5
+altitude = -3
 
 curr_x = 0
 curr_y = 0
@@ -263,7 +263,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return R * c
 
 # Asynchronous function to wait until the drone reaches the waypoint
-async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=10, timeout=60):
+async def wait_until_reached(lat_target, lon_target, altitude_target, tolerance=5, timeout=60):
     start_time = asyncio.get_event_loop().time()
     while True:
         # Get the current position of the drone
@@ -313,6 +313,9 @@ async def drone_path(path_coords):
                                 0, 0, 0,
                                 0, 0, 0,                                # Acceleration (x, y, z) = 0, not used here
                                 0, 0))                                  # Yaw, yaw rate (not changing yaw in this example)
+        
+        
+        
         drone_tel_location()
 
         # Wait until the drone reaches the waypoint
@@ -326,7 +329,7 @@ def drone_control_up():
     global curr_y
     global curr_z
 
-    curr_x += 3
+    curr_x += 1
 
     drone_control()
 
@@ -336,7 +339,7 @@ def drone_control_down():
     global curr_y
     global curr_z
 
-    curr_x -= 3
+    curr_x -= 1
 
     drone_control()
 
@@ -346,7 +349,7 @@ def drone_control_left():
     global curr_y
     global curr_z
 
-    curr_y -= 3
+    curr_y -= 1
 
     drone_control()
 
@@ -355,7 +358,7 @@ def drone_control_right():
     global curr_y
     global curr_z
 
-    curr_y += 3
+    curr_y += 1
 
     drone_control()
 
@@ -409,6 +412,7 @@ async def handle_client(reader, writer):
                 print(f"Invalid lat/lon pair at index {i}")
                 break
         print(lat_lon_pairs)
+        drone_mode("GUIDED")
         drone_task_path = asyncio.create_task(drone_path(lat_lon_pairs))
         #drone_path(lat_lon_pairs)
         
