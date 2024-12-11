@@ -1,4 +1,14 @@
-#https://pyshine.com/Socket-programming-and-openc/
+
+'''
+
+Author: Nicholas Graham (ngraham32@gatech.edu) (nickgraham654@gmail.com)
+Code Attributed from: 
+    https://pyshine.com/Socket-programming-and-openc/
+
+Description: 
+    Sends the annotated frames from PeopleFind.py to (pymavlink\client\GUI_vid_rx.py) to be displayed by the GUI.
+    
+'''
 
 import socket, cv2, pickle,struct,imutils
 import numpy as np

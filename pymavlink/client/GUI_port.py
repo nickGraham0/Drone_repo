@@ -1,5 +1,14 @@
-import socket
+'''
 
+Author: Nicholas Graham (ngraham32@gatech.edu) (nickgraham654@gmail.com)
+Utilized: https://realpython.com/python-sockets/
+Description: 
+Takes input from GUI.py and sends a formatted socket msg to (pymavlink\server\controller.py) for handling.
+Recieves responses (drone location) from (pymavlink\server\controller.py) and transits msg to GUI.py
+
+'''
+
+import socket
 
 def connect_to_server():
     global sock
@@ -16,7 +25,6 @@ def send(msg):
         
         connect_to_server()
 
-        # Send the command
         print(f'Sending command: {msg}')
         sock.sendall(msg.encode('utf8'))
 
@@ -29,10 +37,8 @@ def recieve():
         if sock is None:
             connect_to_server()
 
-        # Wait for the response with a timeout
-        sock.settimeout(5.0)  # Set timeout to 5 seconds
+        sock.settimeout(5.0)
         data = sock.recv(1024).decode('utf8')
-        #print(f"Received drone location: {data}")
         
         return data
     except socket.timeout:

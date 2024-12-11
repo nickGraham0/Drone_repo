@@ -1,14 +1,20 @@
+'''
+
+Author: Nicholas Graham (ngraham32@gatech.edu) (nickgraham654@gmail.com)
+Description: 
+Middleman code of handlers between GUI.py and (pymavlink\server\controller.py)
+
+'''
+
 from GUI_port import send, recieve
 
 def on_rtl():
     print("rtl button pressed")
     send("rtl\n")
 
-
 def on_land():
     print("Land button pressed")
     send("land\n")
-
 
 def on_takeoff():
     print("Takeoff button pressed")
@@ -36,7 +42,6 @@ def on_drone_loc():
     msg = recieve()
     if msg: 
         print(msg)
-        #save_to_csv(msg)
 
 def on_drone_takeoff():
     print("Drone Takeoff button pressed")
@@ -49,4 +54,3 @@ def on_drone_land():
 def on_drone_init():
     print("Drone init signaled")
     recieve()
-    #Drone Init Light turns on

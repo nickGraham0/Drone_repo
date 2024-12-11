@@ -1,3 +1,12 @@
+'''
+
+Utilized: https://www.geeksforgeeks.org/working-csv-files-python/
+Author: Nicholas Graham (ngraham32@gatech.edu) (nickgraham654@gmail.com)
+Description: 
+Utility file that either constructs a csv file or processes and sends the formatted contents of csv file to (pymavlink\server\controller.py)
+
+'''
+
 import csv
 import datetime 
 from tkinter import ttk, filedialog
@@ -13,7 +22,6 @@ def save_to_csv(data):
 
     with open(file_path, mode='w', newline='') as file:
         csv_writer = csv.writer(file)
-        # Assuming data is of the format: "Current Position: x=10, y=5, z=-2"
         headers = ["Latitude", "Longitude", "Altitude"]
         csv_writer.writerow(headers)
         
@@ -27,14 +35,12 @@ def save_to_csv(data):
     print(f"Saved drone location to {file_path}")
 
 def open_csv():
-    # Open a file dialog to select the CSV file
     file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
     if file_path:
         print(f"Selected file: {file_path}")
         read_and_process_csv(file_path)
 
 def read_and_process_csv(filename):
-    # Read the CSV file and print the waypoints
     try:
         with open(filename, mode='r') as file:
             csv_reader = csv.DictReader(file)
@@ -45,11 +51,9 @@ def read_and_process_csv(filename):
                 lon = float(row['Longitude'])
                 waypoints.append(f"{lat} {lon}")
             
-            # Concatenate all waypoints with spaces
             msg += " " + " ".join(waypoints)
-            print(msg)  # This is for debugging
+            print(msg)
             
-            # Send the complete message to the drone
-            send(msg + "\n")  # Assuming send is defined elsewhere
+            send(msg + "\n")
     except Exception as e:
         print(f"Error reading CSV file: {e}")

@@ -1,6 +1,13 @@
-#https://pyshine.com/Socket-programming-and-openc/
+'''
 
-# lets make the client code
+Author: Nicholas Graham (ngraham32@gatech.edu) (nickgraham654@gmail.com)
+Description: 
+Attributed from https://pyshine.com/Socket-programming-and-openc/
+Drone Video Feed Socket Rx. Supplies GUI.py with video frame and intruder ID. Retrieves annotated video feed from (pymavlink\server\Object_Detect\PeopleFind.py).  
+
+
+'''
+
 import socket,cv2, pickle,struct
 
 def init_vid_rx(port_=9998, ip='localhost'):
@@ -10,7 +17,7 @@ def init_vid_rx(port_=9998, ip='localhost'):
 
     # create socket
     client_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    host_ip = ip # paste your server ip address here
+    host_ip = ip
     port = port_
     client_socket.connect((host_ip,port)) # a tuple
     data = b""
@@ -29,7 +36,6 @@ def vid_rx():
         packed_msg_size = data[:payload_size]
         data = data[payload_size:]
         if len(packed_msg_size) == 0:
-            #print(packed_msg_size)
             continue
         msg_size = struct.unpack("Q",packed_msg_size)[0]
         
@@ -44,4 +50,3 @@ def vid_rx():
             break
 
         yield frame_id, frame
-        #cv2.imshow("RECEIVING VIDEO",frame)
